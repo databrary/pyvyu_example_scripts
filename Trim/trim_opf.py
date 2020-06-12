@@ -18,7 +18,10 @@ column_ref = "COLUMN_NAME"
 cell_ref = 0
 
 # Put the columns that you would like to keep here!
-columns = ["COLUMN_NAME_1", "COLUMN_NAME_1", "..."]
+columns = ["COLUMN_NAME_1", "COLUMN_NAME_2", "..."]
+
+#  Columns that need to be added but not edited for example ["id", 'protocol]
+columns_exception = ["COLUMN_NAME_1", "COLUMN_NAME_2", "..."]
 
 # Path to your OPF files folder
 source_folder = "SOURCE/FOLDER/PATH"
@@ -47,15 +50,20 @@ for root, dirs, files in os.walk(source_folder):
             if col is None:
                 continue
 
+            exception = {}
+            for colname in columns_exception:
+                if colname in sheet.columns.keys():
+                    exception[colname] = sheet.get_column(colname)
+
             onset = col.cells[cell_ref].onset
             offset = col.cells[cell_ref].offset
             print("Found onset: {} offset: {} in {}".format(pv.to_timestamp(onset), pv.to_timestamp(offset), column_ref))
 
-            if len(columns) != 0:
-                sheet.columns = {colname: col for (colname, col) in sheet.columns.items() if colname in columns}
+            sheet = pv.trim_sheet(onset, offset, sheet, True, False, *columns)
+            sheet.columns.update(exception)
 
-            sheet = pv.trim_sheet(onset, offset, sheet)
             file_cut = os.path.join(target_folder, os.path.splitext(file)[0] + '_cut.opf')
+
             # save opf generate tmp files, please ignore them it will be fixed in future pyvyu releases
             pv.save_opf(sheet, file_cut)
             rows.append([original_file, file_cut, pv.to_timestamp(onset), pv.to_timestamp(offset), onset, offset])
